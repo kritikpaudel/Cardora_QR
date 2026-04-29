@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Custom QR Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/qr-code-styling/lib/qr-code-styling.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0ede8;
+      --surface: #faf9f7;
+      --surface2: #f0ede8;
+      --border: #e2ddd8;
+      --text: #1a1714;
+      --text-muted: #7c756e;
+      --accent: #d4622a;
+      --accent-light: #fdf0e9;
+      --accent2: #2a7cd4;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,.1);
+      --radius: 14px;
+      --radius-sm: 9px;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--text);
+      color: #fff;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    header span {
+      margin-left: auto;
+      font-size: 12px;
+      color: #aaa;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .wrap {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* Panel */
+    .panel {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: .88rem;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .section-header:hover { background: var(--surface2); }
+
+    .section-header .arrow {
+      margin-left: auto;
+      font-size: 12px;
+      transition: transform .2s;
+    }
+
+    .section.open .arrow { transform: rotate(180deg); }
+
+    .section-body {
+      padding: 0 18px 16px;
+      display: none;
+    }
+
+    .section.open .section-body { display: block; }
+
+    /* Fields */
+    .field { margin-bottom: 12px; }
+
+    .field label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .field input[type="text"],
+    .field input[type="number"],
+    .field input[type="password"],
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--text);
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+
+    .field textarea { resize: vertical; min-height: 72px; }
+
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(212,98,42,.12);
+    }
+
+    .field input[type="color"] {
+      width: 100%;
+      height: 40px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      padding: 3px 6px;
+      cursor: pointer;
+    }
+
+    .field input[type="file"] {
+      width: 100%;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .field input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    .hint {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    .checkline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .checkline input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .range-row input[type="range"] { flex: 1; }
+
+    .range-badge {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 7px;
+      border-radius: 5px;
+      min-width: 42px;
+      text-align: center;
+    }
+
+    /* Type tabs */
+    .type-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .type-tab {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: var(--text-muted);
+      transition: all .15s;
+    }
+
+    .type-tab.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: #fff;
+    }
+
+    /* Templates */
+    .tpl-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .tpl-btn {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 6px 7px;
+      cursor: pointer;
+      background: #fff;
+      transition: all .15s;
+      text-align: center;
+    }
+
+    .tpl-btn:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+
+    .tpl-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      margin: 0 auto 5px;
+    }
+
+    .tpl-btn span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    /* Actions */
+    .actions {
+      padding: 14px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: var(--radius-sm);
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #c0561f; }
+
+    .btn-dark { background: var(--text); color: #fff; }
+    .btn-dark:hover { background: #333; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface2); }
+
+    .btn-green { background: #059669; color: #fff; }
+    .btn-green:hover { background: #047857; }
+
+    .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+    /* Preview */
+    .preview {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .preview-header {
+      padding: 14px 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preview-header h2 {
+      font-size: .88rem;
+      font-weight: 600;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .preview-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    #qr-preview {
+      margin: 16px;
+      min-height: 500px;
+      border-radius: 12px;
+      border: 2px dashed var(--border);
+      background-image:
+        linear-gradient(45deg, #e8e5e0 25%, transparent 25%),
+        linear-gradient(-45deg, #e8e5e0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e8e5e0 75%),
+        linear-gradient(-45deg, transparent 75%, #e8e5e0 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .qr-stage {
+      position: relative;
+      display: inline-block;
+      line-height: 0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #qr-mount {
+      display: inline-block;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-overlay {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 2px dashed rgba(42, 124, 212, .85);
+      border-radius: 10px;
+      z-index: 3;
+      pointer-events: none;
+      display: none;
+    }
+
+    .logo-overlay.active { display: block; }
+
+    .resize-handle {
+      position: absolute;
+      right: -9px;
+      bottom: -9px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent2);
+      border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      pointer-events: auto;
+      cursor: nwse-resize;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--text);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all .25s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Stat pills */
+    .stat-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0 20px 16px;
+    }
+
+    .stat-pill {
+      background: var(--surface2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-pill strong { color: var(--text); }
+
+    /* Download strip */
+    .dl-strip {
+      padding: 12px 20px 20px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Hidden type panels */
+    .type-panel { display: none; }
+    .type-panel.active { display: block; }
+
+    /* Gradient row */
+    .gradient-section {
+      padding-top: 4px;
+    }
+
+    @media (max-width: 940px) {
+      .wrap { grid-template-columns: 1fr; }
+      #qr-preview { min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">⬛</div>
+  <h1>QR Generator</h1>
+  <span>v2.0 — pro edition</span>
+</header>
+
+<div class="wrap">
+  <!-- Left Panel -->
+  <div class="panel">
+
+    <!-- Content Type -->
+    <div class="section open" id="sec-content">
+      <div class="section-header" onclick="toggleSection('sec-content')">
+        📝 Content
+        <span class="arrow">▾</span>
+      </div>
+      <div class="section-body">
+        <div class="type-tabs">
+          <button class="type-tab active" onclick="setType('url', this)">🔗 URL</button>
+          <button class="type-tab" onclick="setType('text', this)">📄 Text</button>
+          <button class="type-tab" onclick="setType('email', this)">📧 Email</button>
+          <button class="type-tab" onclick="setType('phone', this)">📞 Phone</button>
+          <button class="type-tab" onclick="setType('wifi', this)">📶 WiFi</button>
+          <button class="type-tab" onclick="setType('sms', this)">💬 SMS</button>
+          <button class="type-tab" onclick="setType('vcard', this)">👤 vCard</button>
+        </div>
+
+        <!-- URL -->
+        <div class="type-panel active" id="tp-url">
+          <div class="field">
+            <label>URL</label>
+            <input id="urlInput" type="text" value="https://example.com" placeholder="https://..." oninput="buildData(); updateQR()" />
+          </div>
+          <div class="checkline">
+            <input id="autoHttps" type="checkbox" checked onchange="buildData(); updateQR()" />
+            <label for="autoHttps">Auto-add https:// for bare domains</label>
+          </div>
+        </div>
+
+        <!-- Text -->
+        <div class="type-panel" id="tp-text">
+          <div class="field">
+            <label>Plain Text</label>
+            <textarea id="textInput" placeholder="Enter any text..." oninput="buildData(); updateQR()"></textarea>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="type-panel" id="tp-email">
+          <div class="field">
+            <label>To</label>
+            <input id="emailTo" type="text" placeholder="hello@example.com" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Subject</label>
+            <input id="emailSubject" type="text" placeholder="Subject line" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Body</label>
+            <textarea id="emailBody" placeholder="Email body..." oninput="buildData(); updateQR()"></textarea>
+          </div>
+        </div>
+
+        <!-- Phone -->
+        <div class="type-panel" id="tp-phone">
+          <div class="field">
+            <label>Phone Number</label>
+            <input id="phoneInput" type="text" placeholder="+1 555 000 0000" oninput="buildData(); updateQR()" />
+          </div>
+        </div>
+
+        <!-- WiFi -->
+        <div class="type-panel" id="tp-wifi">
+          <div class="field">
+            <label>Network Name (SSID)</label>
+            <input id="wifiSSID" type="text" placeholder="MyNetwork" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input id="wifiPass" type="password" placeholder="Password" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Security</label>
+            <select id="wifiSec" onchange="buildData(); updateQR()">
+              <option value="WPA">WPA / WPA2</option>
+              <option value="WEP">WEP</option>
+              <option value="">None (open)</option>
+            </select>
+          </div>
+          <div class="checkline">
+            <input id="wifiHidden" type="checkbox" onchange="buildData(); updateQR()" />
+            <label for="wifiHidden">Hidden network</label>
+          </div>
+        </div>
+
+        <!-- SMS -->
+        <div class="type-panel" id="tp-sms">
+          <div class="field">
+            <label>Phone Number</label>
+            <input id="smsPhone" type="text" placeholder="+1 555 000 0000" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Message</label>
+            <textarea id="smsMsg" placeholder="Pre-filled message..." oninput="buildData(); updateQR()"></textarea>
+          </div>
+        </div>
+
+        <!-- vCard -->
+        <div class="type-panel" id="tp-vcard">
+          <div class="row">
+            <div class="field">
+              <label>First Name</label>
+              <input id="vcFirst" type="text" placeholder="Jane" oninput="buildData(); updateQR()" />
+            </div>
+            <div class="field">
+              <label>Last Name</label>
+              <input id="vcLast" type="text" placeholder="Doe" oninput="buildData(); updateQR()" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input id="vcPhone" type="text" placeholder="+1 555 000 0000" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="vcEmail" type="text" placeholder="jane@example.com" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Website</label>
+            <input id="vcWeb" type="text" placeholder="https://example.com" oninput="buildData(); updateQR()" />
+          </div>
+          <div class="field">
+            <label>Organization</label>
+            <input id="vcOrg" type="text" placeholder="Company name" oninput="buildData(); updateQR()" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Size & Layout -->
+    <div class="section open" id="sec-size">
+      <div class="section-header" onclick="toggleSection('sec-size')">
+        📐 Size & Layout
+        <span class="arrow">▾</span>
+      </div>
+      <div class="section-body">
+        <div class="row">
+          <div class="field">
+            <label>QR Size (px)</label>
+            <input id="size" type="number" min="120" max="2000" value="380" oninput="updateQR()" />
+          </div>
+          <div class="field">
+            <label>Margin</label>
+            <input id="margin" type="number" min="0" max="80" value="14" oninput="updateQR()" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Error Correction</label>
+          <select id="errorLevel" onchange="updateQR()">
+            <option value="L">L — Low (7%)</option>
+            <option value="M">M — Medium (15%)</option>
+            <option value="Q">Q — Quartile (25%)</option>
+            <option value="H" selected>H — High (30%) — best for logos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colors -->
+    <div class="section open" id="sec-colors">
+      <div class="section-header" onclick="toggleSection('sec-colors')">
+        🎨 Colors
+        <span class="arrow">▾</span>
+      </div>
+      <div class="section-body">
+        <div class="checkline" style="margin-bottom:10px;">
+          <input id="useGradient" type="checkbox" onchange="toggleGradientUI(); updateQR()" />
+          <label for="useGradient">Use gradient for dots</label>
+        </div>
+
+        <div id="solidColorRow">
+          <div class="row">
+            <div class="field">
+              <label>Dot Color</label>
+              <input id="dotColor" type="color" value="#111111" oninput="updateQR()" />
+            </div>
+            <div class="field">
+              <label>Corner Color</label>
+              <input id="cornerColor" type="color" value="#111111" oninput="updateQR()" />
+            </div>
+          </div>
+        </div>
+
+        <div id="gradientColorRow" style="display:none;" class="gradient-section">
+          <div class="row">
+            <div class="field">
+              <label>Gradient Start</label>
+              <input id="gradColor1" type="color" value="#d4622a" oninput="updateQR()" />
+            </div>
+            <div class="field">
+              <label>Gradient End</label>
+              <input id="gradColor2" type="color" value="#2a7cd4" oninput="updateQR()" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Gradient Type</label>
+            <select id="gradType" onchange="updateQR()">
+              <option value="linear">Linear</option>
+              <option value="radial">Radial</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Rotation (linear only)</label>
+            <div class="range-row">
+              <input id="gradRotation" type="range" min="0" max="360" value="45" oninput="updateQR(); updateBadge('gradRotation','gradRotBadge','°')" />
+              <span class="range-badge" id="gradRotBadge">45°</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Corner Color</label>
+            <input id="cornerColorGrad" type="color" value="#111111" oninput="updateQR()" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:8px;">
+          <div class="field">
+            <label>Background</label>
+            <input id="bgColor" type="color" value="#ffffff" oninput="updateQR()" />
+          </div>
+          <div class="field" style="padding-top:22px;">
+            <div class="checkline">
+              <input id="transparentBg" type="checkbox" onchange="updateQR()" />
+              <label for="transparentBg">Transparent BG</label>
+            </div>
+          </div>
+        </div>
+        <div class="hint">PNG & SVG support transparency. JPEG exports white background.</div>
+      </div>
+    </div>
+
+    <!-- Styles -->
+    <div class="section open" id="sec-styles">
+      <div class="section-header" onclick="toggleSection('sec-styles')">
+        ✦ Dot Styles
+        <span class="arrow">▾</span>
+      </div>
+      <div class="section-body">
+        <div class="row">
+          <div class="field">
+            <label>Dot Style</label>
+            <select id="dotStyle" onchange="updateQR()">
+              <option value="square">Square</option>
+              <option value="rounded" selected>Rounded</option>
+              <option value="dots">Dots</option>
+              <option value="classy">Classy</option>
+              <option value="classy-rounded">Classy Rounded</option>
+              <option value="extra-rounded">Extra Rounded</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Corner Square</label>
+            <select id="cornerSquareStyle" onchange="updateQR()">
+              <option value="square">Square</option>
+              <option value="dot">Dot</option>
+              <option value="extra-rounded" selected>Extra Rounded</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Corner Dot</label>
+          <select id="cornerDotStyle" onchange="updateQR()">
+            <option value="square">Square</option>
+            <option value="dot" selected>Dot</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="section open" id="sec-logo">
+      <div class="section-header" onclick="toggleSection('sec-logo')">
+        🖼 Logo
+        <span class="arrow">▾</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Upload Logo</label>
+          <input id="logoFile" type="file" accept="image/*" />
+          <div class="hint">Drag the blue handle in the preview to resize. Use H error correction for best results with logos.</div>
+        </div>
+        <div class="field">
+          <label>Logo Size</label>
+          <div class="range-row">
+            <input id="logoSize" type="range" min="0.05" max="0.60" step="0.01" value="0.28"
+              oninput="updateQR(); updateBadge('logoSize','logoSizeBadge','')" />
+            <span class="range-badge" id="logoSizeBadge">0.28</span>
+          </div>
+          <div class="hint">Range: 5% – 60% of QR size. Increase for large, visible logos.</div>
+        </div>
+        <div class="field">
+          <label>Logo Margin (px)</label>
+          <input id="logoMargin" type="number" min="0" max="40" value="6" oninput="updateQR()" />
+        </div>
+        <div class="checkline">
+          <input id="logoHideDots" type="checkbox" checked onchange="updateQR()" />
+          <label for="logoHideDots">Hide dots behind logo</label>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="clearLogo()">✕ Remove Logo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates -->
+    <div class="section open" id="sec-tpl">
+      <div class="section-header" onclick="toggleSection('sec-tpl')">
+        🗃 Templates
+        <span class="arrow">▾</span>
+      </div>
+      <div class="section-body">
+        <div class="tpl-grid">
+          <button class="tpl-btn" onclick="applyTemplate('classic')">
+            <div class="tpl-swatch" style="background:#000"></div>
+            <span>Classic</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('modern')">
+            <div class="tpl-swatch" style="background:#1f2937"></div>
+            <span>Modern</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('ocean')">
+            <div class="tpl-swatch" style="background:linear-gradient(135deg,#0f766e,#0ea5e9)"></div>
+            <span>Ocean</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('fire')">
+            <div class="tpl-swatch" style="background:linear-gradient(135deg,#dc2626,#f97316)"></div>
+            <span>Fire</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('neon')">
+            <div class="tpl-swatch" style="background:#0a0a0a; outline: 2px solid #39ff14;"></div>
+            <span>Neon</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('sunset')">
+            <div class="tpl-swatch" style="background:linear-gradient(135deg,#7c3aed,#ec4899)"></div>
+            <span>Sunset</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('mint')">
+            <div class="tpl-swatch" style="background:#064e3b; border: 2px solid #d1fae5;"></div>
+            <span>Mint</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('gold')">
+            <div class="tpl-swatch" style="background:linear-gradient(135deg,#92400e,#d97706)"></div>
+            <span>Gold</span>
+          </button>
+          <button class="tpl-btn" onclick="applyTemplate('slate')">
+            <div class="tpl-swatch" style="background:#1e293b"></div>
+            <span>Slate</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="updateQR()">⟳ Update QR</button>
+      <button class="btn btn-dark" onclick="downloadQR('png')">↓ PNG</button>
+      <button class="btn btn-dark" onclick="downloadQR('svg')">↓ SVG</button>
+      <button class="btn btn-dark" onclick="downloadQR('jpeg')">↓ JPEG</button>
+      <button class="btn btn-green" onclick="copyToClipboard()">⎘ Copy</button>
+    </div>
+  </div>
+
+  <!-- Right Preview -->
+  <div class="preview">
+    <div class="preview-header">
+      <h2>Preview</h2>
+      <span class="preview-meta" id="previewMeta">380 × 380 px</span>
+    </div>
+    <div class="stat-bar" id="statBar"></div>
+    <div id="qr-preview">
+      <div class="qr-stage" id="qr-stage">
+        <div id="qr-mount"></div>
+        <div class="logo-overlay" id="logoOverlay">
+          <div class="resize-handle" id="resizeHandle"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dl-strip">
+      <button class="btn btn-dark" onclick="downloadQR('png')">↓ Download PNG</button>
+      <button class="btn btn-dark" onclick="downloadQR('svg')">↓ Download SVG</button>
+      <button class="btn btn-ghost" onclick="downloadQR('jpeg')">↓ JPEG</button>
+      <button class="btn btn-green" onclick="copyToClipboard()">⎘ Copy Image</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let qrCode;
+  let logoData = "";
+  let resizing = false;
+  let startX = 0;
+  let startSize = 0;
+  let currentType = "url";
+
+  const qrMount = document.getElementById("qr-mount");
+  const logoOverlay = document.getElementById("logoOverlay");
+  const resizeHandle = document.getElementById("resizeHandle");
+  const logoSizeInput = document.getElementById("logoSize");
+
+  /* ─── Section toggle ─── */
+  function toggleSection(id) {
+    document.getElementById(id).classList.toggle("open");
+  }
+
+  /* ─── Type switching ─── */
+  function setType(type, el) {
+    currentType = type;
+    document.querySelectorAll(".type-tab").forEach(t => t.classList.remove("active"));
+    el.classList.add("active");
+    document.querySelectorAll(".type-panel").forEach(p => p.classList.remove("active"));
+    document.getElementById("tp-" + type).classList.add("active");
+    buildData();
+    updateQR();
+  }
+
+  /* ─── Build QR data string ─── */
+  function buildData() {
+    // returns the string to encode
+  }
+
+  function getData() {
+    if (currentType === "url") {
+      return normalizeURL(document.getElementById("urlInput").value);
+    }
+    if (currentType === "text") {
+      return document.getElementById("textInput").value || "Hello, World!";
+    }
+    if (currentType === "email") {
+      const to = document.getElementById("emailTo").value;
+      const subj = encodeURIComponent(document.getElementById("emailSubject").value);
+      const body = encodeURIComponent(document.getElementById("emailBody").value);
+      return `mailto:${to}?subject=${subj}&body=${body}`;
+    }
+    if (currentType === "phone") {
+      return "tel:" + (document.getElementById("phoneInput").value || "+10000000000");
+    }
+    if (currentType === "wifi") {
+      const ssid = document.getElementById("wifiSSID").value;
+      const pass = document.getElementById("wifiPass").value;
+      const sec = document.getElementById("wifiSec").value;
+      const hidden = document.getElementById("wifiHidden").checked ? "true" : "false";
+      return `WIFI:T:${sec};S:${ssid};P:${pass};H:${hidden};;`;
+    }
+    if (currentType === "sms") {
+      const ph = document.getElementById("smsPhone").value;
+      const msg = encodeURIComponent(document.getElementById("smsMsg").value);
+      return `smsto:${ph}:${msg}`;
+    }
+    if (currentType === "vcard") {
+      const fn = `${document.getElementById("vcFirst").value} ${document.getElementById("vcLast").value}`.trim();
+      const ph = document.getElementById("vcPhone").value;
+      const em = document.getElementById("vcEmail").value;
+      const web = document.getElementById("vcWeb").value;
+      const org = document.getElementById("vcOrg").value;
+      return `BEGIN:VCARD\nVERSION:3.0\nFN:${fn}\nTEL:${ph}\nEMAIL:${em}\nURL:${web}\nORG:${org}\nEND:VCARD`;
+    }
+    return "https://example.com";
+  }
+
+  function normalizeURL(value) {
+    const raw = (value || "").trim();
+    if (!raw) return "https://example.com";
+    const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(raw);
+    if (hasScheme) return raw;
+    if (!document.getElementById("autoHttps").checked) return raw;
+    const looksLikeDomain = /^[^\s]+\.[^\s]+/.test(raw) && !raw.includes(" ");
+    return looksLikeDomain ? "https://" + raw : raw;
+  }
+
+  /* ─── Gradient UI ─── */
+  function toggleGradientUI() {
+    const on = document.getElementById("useGradient").checked;
+    document.getElementById("solidColorRow").style.display = on ? "none" : "block";
+    document.getElementById("gradientColorRow").style.display = on ? "block" : "none";
+  }
+
+  /* ─── Badge updater ─── */
+  function updateBadge(inputId, badgeId, suffix) {
+    document.getElementById(badgeId).textContent = document.getElementById(inputId).value + suffix;
+  }
+
+  /* ─── Get QR options ─── */
+  function getCornerColor() {
+    return document.getElementById("useGradient").checked
+      ? document.getElementById("cornerColorGrad").value
+      : document.getElementById("cornerColor").value;
+  }
+
+  function getBgColor(forDownloadExt) {
+    const transparent = document.getElementById("transparentBg").checked;
+    if (forDownloadExt === "jpeg" && transparent) return "#ffffff";
+    return transparent ? "transparent" : document.getElementById("bgColor").value;
+  }
+
+  function getDotsOptions() {
+    const useGrad = document.getElementById("useGradient").checked;
+    const dotStyle = document.getElementById("dotStyle").value;
+
+    if (useGrad) {
+      const rotation = parseInt(document.getElementById("gradRotation").value) * Math.PI / 180;
+      return {
+        type: dotStyle,
+        gradient: {
+          type: document.getElementById("gradType").value,
+          rotation: rotation,
+          colorStops: [
+            { offset: 0, color: document.getElementById("gradColor1").value },
+            { offset: 1, color: document.getElementById("gradColor2").value }
+          ]
+        }
+      };
+    }
+
+    return {
+      color: document.getElementById("dotColor").value,
+      type: dotStyle
+    };
+  }
+
+  function getOptions(forDownloadExt = null) {
+    const size = parseInt(document.getElementById("size").value) || 380;
+    const margin = parseInt(document.getElementById("margin").value) || 14;
+    const cornerColor = getCornerColor();
+    const cornerSquareStyle = document.getElementById("cornerSquareStyle").value;
+    const cornerDotStyle = document.getElementById("cornerDotStyle").value;
+    const errorLevel = document.getElementById("errorLevel").value;
+    const logoSize = parseFloat(document.getElementById("logoSize").value) || 0.28;
+    const logoMargin = parseInt(document.getElementById("logoMargin").value) || 6;
+    const hideDots = document.getElementById("logoHideDots").checked;
+    const data = getData();
+
+    return {
+      width: size,
+      height: size,
+      type: "svg",
+      data: data,
+      image: logoData || "",
+      margin: margin,
+      qrOptions: { errorCorrectionLevel: errorLevel },
+      imageOptions: {
+        hideBackgroundDots: hideDots,
+        imageSize: logoSize,
+        margin: logoMargin,
+        crossOrigin: "anonymous"
+      },
+      dotsOptions: getDotsOptions(),
+      backgroundOptions: { color: getBgColor(forDownloadExt) },
+      cornersSquareOptions: { color: cornerColor, type: cornerSquareStyle },
+      cornersDotOptions: { color: cornerColor, type: cornerDotStyle }
+    };
+  }
+
+  /* ─── QR create / update ─── */
+  function createQR() {
+    qrMount.innerHTML = "";
+    qrCode = new QRCodeStyling(getOptions());
+    qrCode.append(qrMount);
+    requestAnimationFrame(() => { updateLogoOverlay(); updateMeta(); });
+  }
+
+  function updateQR() {
+    if (!qrCode) { createQR(); return; }
+    qrCode.update(getOptions());
+    requestAnimationFrame(() => { updateLogoOverlay(); updateMeta(); });
+  }
+
+  function updateMeta() {
+    const size = parseInt(document.getElementById("size").value) || 380;
+    document.getElementById("previewMeta").textContent = `${size} × ${size} px`;
+
+    const data = getData();
+    const chars = data.length;
+    const bar = document.getElementById("statBar");
+    const type = currentType.toUpperCase();
+    bar.innerHTML = `
+      <div class="stat-pill">Type: <strong>${type}</strong></div>
+      <div class="stat-pill">Chars: <strong>${chars}</strong></div>
+      <div class="stat-pill">Size: <strong>${size}px</strong></div>
+      <div class="stat-pill">ECC: <strong>${document.getElementById("errorLevel").value}</strong></div>
+    `;
+  }
+
+  /* ─── Logo overlay ─── */
+  function updateLogoOverlay() {
+    const size = parseInt(document.getElementById("size").value) || 380;
+    const logoSize = parseFloat(document.getElementById("logoSize").value) || 0.28;
+    document.getElementById("logoSizeBadge").textContent = logoSize.toFixed(2);
+
+    if (!logoData) { logoOverlay.classList.remove("active"); return; }
+
+    const overlaySize = Math.max(36, size * logoSize);
+    logoOverlay.style.width = overlaySize + "px";
+    logoOverlay.style.height = overlaySize + "px";
+    logoOverlay.classList.add("active");
+  }
+
+  /* ─── Download ─── */
+  function downloadQR(ext) {
+    if (!qrCode) createQR();
+    qrCode.update(getOptions(ext));
+    requestAnimationFrame(() => {
+      qrCode.download({ name: "custom-qr", extension: ext });
+      setTimeout(() => qrCode.update(getOptions()), 80);
+    });
+    toast(`Downloading ${ext.toUpperCase()}…`);
+  }
+
+  /* ─── Copy to clipboard ─── */
+  async function copyToClipboard() {
+    if (!qrCode) { createQR(); await new Promise(r => setTimeout(r, 200)); }
+
+    try {
+      const svgEl = qrMount.querySelector("svg");
+      if (!svgEl) { toast("No QR to copy"); return; }
+
+      const svgStr = new XMLSerializer().serializeToString(svgEl);
+      const size = parseInt(document.getElementById("size").value) || 380;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      const img = new Image();
+      const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      img.onload = async () => {
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(async (pngBlob) => {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
+            toast("✓ Copied to clipboard!");
+          } catch {
+            toast("Copy failed — try downloading instead");
+          }
+        }, "image/png");
+      };
+      img.src = url;
+    } catch (e) {
+      toast("Copy not supported in this browser");
+    }
+  }
+
+  /* ─── Clear logo ─── */
+  function clearLogo() {
+    logoData = "";
+    document.getElementById("logoFile").value = "";
+    updateQR();
+    updateLogoOverlay();
+    toast("Logo removed");
+  }
+
+  /* ─── Toast ─── */
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 2500);
+  }
+
+  /* ─── Templates ─── */
+  function setGradientTemplate(c1, c2, type, rotation, bgColor, dotStyle, csStyle, cdStyle) {
+    document.getElementById("useGradient").checked = true;
+    toggleGradientUI();
+    document.getElementById("gradColor1").value = c1;
+    document.getElementById("gradColor2").value = c2;
+    document.getElementById("gradType").value = type;
+    document.getElementById("gradRotation").value = rotation;
+    document.getElementById("gradRotBadge").textContent = rotation + "°";
+    document.getElementById("cornerColorGrad").value = c1;
+    document.getElementById("bgColor").value = bgColor;
+    document.getElementById("transparentBg").checked = false;
+    document.getElementById("dotStyle").value = dotStyle;
+    document.getElementById("cornerSquareStyle").value = csStyle;
+    document.getElementById("cornerDotStyle").value = cdStyle;
+  }
+
+  function setSolidTemplate(dotCol, cornerCol, bgCol, dotStyle, csStyle, cdStyle) {
+    document.getElementById("useGradient").checked = false;
+    toggleGradientUI();
+    document.getElementById("dotColor").value = dotCol;
+    document.getElementById("cornerColor").value = cornerCol;
+    document.getElementById("bgColor").value = bgCol;
+    document.getElementById("transparentBg").checked = false;
+    document.getElementById("dotStyle").value = dotStyle;
+    document.getElementById("cornerSquareStyle").value = csStyle;
+    document.getElementById("cornerDotStyle").value = cdStyle;
+  }
+
+  function applyTemplate(name) {
+    const t = {
+      classic: () => setSolidTemplate("#000000","#000000","#ffffff","square","square","square"),
+      modern:  () => setSolidTemplate("#111827","#111827","#ffffff","rounded","extra-rounded","dot"),
+      ocean:   () => setGradientTemplate("#0f766e","#0ea5e9","linear",135,"#ecfeff","dots","extra-rounded","dot"),
+      fire:    () => setGradientTemplate("#dc2626","#f97316","linear",120,"#fff7ed","classy-rounded","extra-rounded","dot"),
+      neon:    () => setSolidTemplate("#39ff14","#39ff14","#0a0a0a","dots","extra-rounded","dot"),
+      sunset:  () => setGradientTemplate("#7c3aed","#ec4899","linear",145,"#fdf4ff","classy-rounded","extra-rounded","dot"),
+      mint:    () => setSolidTemplate("#064e3b","#059669","#ecfdf5","rounded","extra-rounded","dot"),
+      gold:    () => setGradientTemplate("#92400e","#d97706","linear",90,"#fffbeb","classy","extra-rounded","dot"),
+      slate:   () => setSolidTemplate("#1e293b","#334155","#f8fafc","rounded","extra-rounded","dot"),
+    };
+    if (t[name]) { t[name](); updateQR(); toast("Template applied: " + name); }
+  }
+
+  /* ─── Logo file ─── */
+  document.getElementById("logoFile").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (!file) { logoData = ""; updateQR(); updateLogoOverlay(); return; }
+    const reader = new FileReader();
+    reader.onload = ev => { logoData = ev.target.result; updateQR(); };
+    reader.readAsDataURL(file);
+  });
+
+  /* ─── Resize handle ─── */
+  resizeHandle.addEventListener("pointerdown", (e) => {
+    if (!logoData) return;
+    resizing = true;
+    startX = e.clientX;
+    startSize = parseFloat(logoSizeInput.value);
+    resizeHandle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!resizing) return;
+    const delta = e.clientX - startX;
+    let next = startSize + (delta / 400);
+    next = Math.max(0.05, Math.min(0.60, next));
+    logoSizeInput.value = next.toFixed(2);
+    updateQR();
+  });
+
+  window.addEventListener("pointerup", () => { resizing = false; });
+
+  /* ─── Init ─── */
+  createQR();
+</script>
+</body>
+</html>
